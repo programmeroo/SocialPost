@@ -1,0 +1,9 @@
+python-dotenv>=1.0.0
+boto3>=1.26.0
+botocore>=1.29.0
+requests>=2.31.0
+tweepy==4.16.0
+instagrapi>=1.22.0
+pillow>=10.0.0
+linkedin-api>=2.0.0
+
