@@ -1,37 +1,41 @@
-from dotenv import load_dotenv
 from social_post import SocialPoster
-import os
+from linkedin_post import LinkedInPoster
 import sys
+from safio import get_env, safe_print
 
-load_dotenv()
 
 def main():
-    dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
 
     poster = SocialPoster(
-        fb_page_id=os.getenv("FB_PAGE_ID"),
-        fb_token=os.getenv("FB_PAGE_TOKEN"),
-        ig_user_id=os.getenv("IG_USER_ID"),
-        ig_token=os.getenv("FB_PAGE_TOKEN"),
-        x_api_key=os.getenv("X_API_KEY"),
-        x_api_secret=os.getenv("X_API_SECRET"),
-        x_access_token=os.getenv("X_ACCESS_TOKEN"),
-        x_access_secret=os.getenv("X_ACCESS_SECRET"),
-        make_webhook_url=os.getenv("MAKE_WEBHOOK_URL"),
-        s3_bucket=os.getenv("IDRIVE_BUCKET"),
-        s3_endpoint=os.getenv("IDRIVE_ENDPOINT"),
-        s3_key=os.getenv("IDRIVE_KEY"),
-        s3_secret=os.getenv("IDRIVE_SECRET"),
-        dry_run=dry_run
+        fb_app_id = get_env("FB_APP_ID"),
+        fb_app_secret = get_env("FB_APP_SECRET"),
+        fb_long_lived_user_token = get_env("FB_LL_USER_TOKEN"),
+        fb_page_id = get_env("FB_PAGE_ID"),
+        fb_page_token = get_env("FB_PAGE_TOKEN"),
+        ig_user_id = get_env("IG_USER_ID"),
+        ig_page_token = get_env("IG_PAGE_TOKEN"),
+        s3_bucket = get_env("S3_BUCKET"),
+        s3_endpoint = get_env("S3_ENDPOINT"),
+        s3_key = get_env("S3_KEY"),
+        s3_secret = get_env("S3_SECRET"),
+        media_base_url = get_env("MEDIA_BASE_URL", "https://media.andysabo.com"),
+        posts_folder = get_env("POSTS_FOLDER", "./post"),
     )
 
-    mode = "🟡 DRY-RUN MODE" if dry_run else "🚀 LIVE MODE"
-    print(f"\nStarting SocialPoster in {mode}\n")
+    li_poster = LinkedInPoster(
+        make_webhook_url = get_env("MAKE_WEBHOOK_URL"),
+        s3_bucket = get_env("S3_BUCKET"),
+        s3_endpoint = get_env("S3_ENDPOINT"),
+        s3_key = get_env("S3_KEY"),
+        s3_secret = get_env("S3_SECRET"),
+        media_base_url = get_env("MEDIA_BASE_URL", "https://media.andysabo.com"),
+    )
 
     try:
-        poster.post_all_pending()
+        li_poster.post_one()
+        poster.post_one()
     except Exception as e:
-        print(f"❌ Fatal error: {e}")
+        safe_print(f"❌ Fatal error: {e}")
         sys.exit(1)
 
 

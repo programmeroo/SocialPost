@@ -5,3 +5,21 @@
 2025-08-14 16:28:59,237 - INFO - Posted to X.com: Tweet ID 1956181294679011537, Media: /home/andy/PYTHON/xpost/posts/8-12-25_1.jpg, Text: ☕ No Income Docs. No Tax Returns. Just the property’s income. #RealEstateInvesting #MortgageWithAndy #InvestorLoans
 2025-08-14 16:28:59,239 - INFO - Deleted media file: /home/andy/PYTHON/xpost/posts/8-12-25_1.jpg
 2025-08-14 16:28:59,240 - INFO - Deleted text file: /home/andy/PYTHON/xpost/posts/8-12-25_1.txt
+2025-10-15 16:56:17,606 - INFO - Found files: ['./xpost\\9-18-25_10.jpg']
+2025-10-15 16:56:17,606 - INFO - Selected media: ./xpost\9-18-25_10.jpg, Text file: ./xpost\9-18-25_10.txt
+2025-10-15 16:56:17,607 - INFO - Uploading media: ./xpost\9-18-25_10.jpg
+2025-10-15 16:56:18,349 - ERROR - Failed to post to X.com: 401 Unauthorized
+89 - Invalid or expired token
+2025-10-15 17:02:01,046 - INFO - Found files: ['./xpost\\9-18-25_10.jpg']
+2025-10-15 17:02:01,046 - INFO - Selected media: ./xpost\9-18-25_10.jpg, Text file: ./xpost\9-18-25_10.txt
+2025-10-15 17:02:01,046 - INFO - Uploading media: ./xpost\9-18-25_10.jpg
+2025-10-15 17:02:02,162 - INFO - Uploaded media ID: 1978657660808695808
+2025-10-15 17:02:02,617 - INFO - Posted to X.com: Tweet ID 1978657663249707409, Media: ./xpost\9-18-25_10.jpg, Text: \ufeff\U0001f3e1 Refinancing lets you stay put but spend less. Rates are at their lowest in a year. #MortgageWithAndy #RefiRelief
+2025-10-15 17:02:02,628 - INFO - Deleted media file: ./xpost\9-18-25_10.jpg
+2025-10-15 17:02:02,630 - INFO - Deleted text file: ./xpost\9-18-25_10.txt
+2025-10-15 17:03:54,488 - INFO - Found files: ['./xpost\\10-2-25_1.mp4']
+2025-10-15 17:03:54,488 - INFO - Selected media: ./xpost\10-2-25_1.mp4, Text file: None
+2025-10-15 17:03:54,488 - INFO - Uploading media: ./xpost\10-2-25_1.mp4
+2025-10-15 17:04:19,792 - INFO - Uploaded media ID: 1978658134748237826
+2025-10-15 17:04:20,088 - INFO - Posted to X.com: Tweet ID 1978658240461488557, Media: ./xpost\10-2-25_1.mp4, Text: None
+2025-10-15 17:04:20,095 - INFO - Deleted media file: ./xpost\10-2-25_1.mp4
