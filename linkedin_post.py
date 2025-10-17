@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 from safio import safe_print
 
 
-DEFAULT_CAPTION = "#MortgageWithAndy #LowMortgageRates DM me today."
+DEFAULT_CAPTION = "#MortgageWithAndy #LowMortgageRates #RealEstateInvesting #HomePurchase DM me today."
 
 
 class LinkedInPoster:
@@ -99,6 +99,7 @@ class LinkedInPoster:
     # Post ONE item (main.py orchestrates calls)
     # ------------------------------------------------------------------
     def post_one(self):
+        safe_print(f"LinkedInPoster.post_one")
         keys = self.list_post_files()
         media_files = [k for k in keys if k.lower().endswith((".jpg", ".jpeg", ".png", ".mp4"))]
         if not media_files:

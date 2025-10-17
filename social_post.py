@@ -136,7 +136,7 @@ class SocialPoster:
 
         # Download media file
         self.s3.download_file(self.s3_bucket, media_key, local_media_path)
-        safe_print(f"📥 Copied media to {local_media_path}")
+        safe_print(f"📥 Copied media {media_key} to {local_media_path}")
 
         # Download corresponding text file (if exists)
         base, _ = os.path.splitext(media_key)
@@ -144,7 +144,7 @@ class SocialPoster:
         local_txt_path = os.path.join(local_dir, os.path.basename(txt_key))
         try:
             self.s3.download_file(self.s3_bucket, txt_key, local_txt_path)
-            safe_print(f"📥 Copied caption to {local_txt_path}")
+            safe_print(f"📥 Copied caption {txt_key} to {local_txt_path}")
         except self.s3.exceptions.NoSuchKey:
             safe_print("⚠️ No caption file found for this media.")
 
@@ -284,90 +284,7 @@ class SocialPoster:
     # ------------------------------------------------------------------
     # Instagram — by URL (container -> poll -> publish, v21.0)
     # ------------------------------------------------------------------
-    # THIS VERSION WORKS ON WINDOWS AND IS FAILING ON THE RASPBERRY-PI
-    def post_instagram_tested_on_windows(self, message: str, media_url: str, is_video: bool):
-        token = self.ig_page_token or self.fb_page_token
-        if not (self.ig_user_id and token):
-            raise RuntimeError("IG missing ig_user_id or token")
-
-        c_url = f"https://graph.facebook.com/v21.0/{self.ig_user_id}/media"
-        payload = {"access_token": token, "caption": message[:2200]}
-        if is_video:
-            payload.update({"media_type": "REELS", "video_url": media_url, "share_to_feed": "true"})
-        else:
-            payload.update({"image_url": media_url})
-
-        params = {}
-        proof = self._appsecret_proof(token)
-        if proof:
-            params["appsecret_proof"] = proof
-
-        rc = requests.post(c_url, params=params, data=payload, timeout=90)
-        if not rc.ok:
-            # token 190 once
-            try:
-                code = (rc.json().get("error") or {}).get("code")
-            except Exception:
-                code = None
-            if code == 190 and self.fb_refresh_page_token_if_needed():
-                token = self.fb_page_token
-                payload["access_token"] = token
-                params = {}
-                proof = self._appsecret_proof(token)
-                if proof:
-                    params["appsecret_proof"] = proof
-                rc = requests.post(c_url, params=params, data=payload, timeout=90)
-
-        safe_print("📦 IG Container:", rc.status_code, rc.text)
-        rc.raise_for_status()
-        container_id = rc.json().get("id")
-        if not container_id:
-            raise RuntimeError("IG: no container id")
-
-        # Only poll for video
-        if is_video:
-            status_url = f"https://graph.facebook.com/v21.0/{container_id}"
-            for _ in range(90):  # ~7.5 min
-                status_params = {"fields": "status_code", "access_token": token}
-                proof = self._appsecret_proof(token)
-                if proof:
-                    status_params["appsecret_proof"] = proof
-                rs = requests.get(status_url, params=status_params, timeout=30)
-                if rs.ok:
-                    sc = rs.json().get("status_code")
-                    safe_print("⏳ IG Status:", sc)
-                    if sc in ("FINISHED", "PUBLISHED"):
-                        break
-                    if sc in ("ERROR", "FAILED"):
-                        raise RuntimeError(f"Instagram processing failed: {rs.text}")
-                else:
-                    safe_print("⏳ IG Status err:", rs.status_code, rs.text)
-                time.sleep(5)
-
-        pub_params = {}
-        proof = self._appsecret_proof(token)
-        if proof:
-            pub_params["appsecret_proof"] = proof
-
-        pub = requests.post(
-            f"https://graph.facebook.com/v21.0/{self.ig_user_id}/media_publish",
-            params=pub_params,
-            data={"creation_id": container_id, "access_token": token},
-            timeout=90
-        )
-        safe_print("📸 IG Publish:", pub.status_code, pub.text)
-        pub.raise_for_status()
-        return pub.json()
-
-
-    def post_instagram_tested_on_windows_v2(self, message: str, media_url: str, is_video: bool):
-        """
-        Updated Instagram posting function.
-        Adds polling to ensure the IG container is ready before publishing (fixes 9007 error).
-        """
-
-        import requests
-
+    def post_instagram(self, message: str, media_url: str, is_video: bool):
         token = self.ig_page_token or self.fb_page_token
         if not (self.ig_user_id and token):
             raise RuntimeError("IG missing ig_user_id or token")
@@ -438,16 +355,16 @@ class SocialPoster:
         safe_print(f"   URL : {media_url}")
         safe_print(f"   Text: {caption}")
 
-        # Test set: FB + IG (URL)
         fb_res = self.post_facebook(caption, media_url, is_video)
-        fb_res = "debug removed facebook"
-        ig_res = self.post_instagram_tested_on_windows_v2(caption, media_url, is_video)
+        ig_res = self.post_instagram(caption, media_url, is_video)
 
         safe_print("SUMMARY:", {"facebook": bool(fb_res), "instagram": bool(ig_res)})        
-        # move the files
-        # 1. Copy current files to local Raspberry Pi folder
+        """
+        Copy the files from the S3 bucket to the POST_FOLDER
+        xpost script runs after this script. Posts to X, then deletes the files.
+        Move the files on the S3 bucket to the posted folder.
+        """
         self.copy_current_to_local(media_key, self.posts_folder)
-        #DEBUG REMOVED
-        # 2. Move S3 files to posted/
+        safe_print("Move the S3 files to posted.")
         self.move_to_posted(media_key)
 

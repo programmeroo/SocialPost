@@ -56,5 +56,5 @@ def get_env(name: str, default=None):
     """
     system_name = platform.system().lower()
     env_name = f"WIN_{name}" if "windows" in system_name else name
-    safe_print(f"env_name: {env_name}")
+    # safe_print(f"env_name: {env_name}")
     return os.getenv(env_name, default)
