@@ -2,24 +2,41 @@
 import os
 import sys
 import platform
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def safe_print(*args, sep=" ", end="\n", file=sys.stdout, flush=False):
     """
-    Print text safely even if emojis or non-UTF-8 characters appear.
-    On non-Windows systems, falls back to ASCII with replacement when needed.
+    Print safely even if args contain None or emojis.
+    On non-Windows systems, falls back to ASCII-safe mode.
     """
     system_name = platform.system().lower()
 
-    # Windows handles UTF-8 console output fine (esp. Win10+)
+    # Normalize args: convert None -> "None", bytes -> decoded string
+    safe_args = []
+    for a in args:
+        if a is None:
+            safe_args.append("None")
+        elif isinstance(a, bytes):
+            try:
+                safe_args.append(a.decode("utf-8", errors="replace"))
+            except Exception:
+                safe_args.append(str(a))
+        else:
+            safe_args.append(str(a))
+
+    msg = sep.join(safe_args)
+
+    # Windows prints normally
     if "windows" in system_name:
-        print(*args, sep=sep, end=end, file=file, flush=flush)
+        print(msg, end=end, file=file, flush=flush)
         return
 
     try:
-        print(*args, sep=sep, end=end, file=file, flush=flush)
+        print(msg, end=end, file=file, flush=flush)
     except UnicodeEncodeError:
-        msg = sep.join(str(a) for a in args)
         safe_msg = msg.encode("ascii", "replace").decode()
         file.write(safe_msg + end)
         if flush:
@@ -39,4 +56,5 @@ def get_env(name: str, default=None):
     """
     system_name = platform.system().lower()
     env_name = f"WIN_{name}" if "windows" in system_name else name
+    safe_print(f"env_name: {env_name}")
     return os.getenv(env_name, default)

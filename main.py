@@ -2,6 +2,9 @@ from social_post import SocialPoster
 from linkedin_post import LinkedInPoster
 import sys
 from safio import get_env, safe_print
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def main():

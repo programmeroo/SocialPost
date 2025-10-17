@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 from safio import safe_print
 
 
-DEFAULT_CAPTION = "#MortgageWithAndy #LowMortgageRates DM me today."
+DEFAULT_CAPTION = "#MortgageWithAndy #LowMortgageRates #RealEstateInvesting #HomePurchase DM me today."
 
 
 class SocialPoster:
@@ -83,6 +83,42 @@ class SocialPoster:
     def public_url(self, key: str) -> str:
         """Public URL served by media-service (what FB/IG will fetch)."""
         return f"{self.media_base_url}/media/{key}"
+
+
+    def _poll_ig_container_ready(self, container_id: str, token: str, appsecret_func, printer, is_video: bool = False):
+        """
+        Poll Instagram Graph API until media container status_code == FINISHED.
+        Avoids 'Media ID is not available' (error 9007).
+        """
+        if is_video:
+            return  # IG handles longer video processing internally
+
+        status_url = f"https://graph.facebook.com/v21.0/{container_id}"
+        for attempt in range(10):  # wait up to ~50 seconds
+            time.sleep(5)
+            params = {"fields": "status_code", "access_token": token}
+            proof = appsecret_func(token)
+            if proof:
+                params["appsecret_proof"] = proof
+
+            try:
+                rs = requests.get(status_url, params=params, timeout=30)
+                if not rs.ok:
+                    printer(f"⚠️ IG poll {attempt+1}/10 failed ({rs.status_code}): {rs.text}")
+                    continue
+
+                status = rs.json().get("status_code")
+                printer(f"⏳ IG poll {attempt+1}/10: {status}")
+
+                if status in ("FINISHED", "PUBLISHED"):
+                    return
+                if status in ("ERROR", "FAILED"):
+                    raise RuntimeError(f"IG processing failed: {rs.text}")
+
+            except Exception as e:
+                printer(f"⚠️ IG polling error: {e}")
+
+        raise TimeoutError(f"IG container {container_id} not ready after polling.")
     
 
     # ------------------------------------------------------------------
@@ -248,7 +284,8 @@ class SocialPoster:
     # ------------------------------------------------------------------
     # Instagram — by URL (container -> poll -> publish, v21.0)
     # ------------------------------------------------------------------
-    def post_instagram(self, message: str, media_url: str, is_video: bool):
+    # THIS VERSION WORKS ON WINDOWS AND IS FAILING ON THE RASPBERRY-PI
+    def post_instagram_tested_on_windows(self, message: str, media_url: str, is_video: bool):
         token = self.ig_page_token or self.fb_page_token
         if not (self.ig_user_id and token):
             raise RuntimeError("IG missing ig_user_id or token")
@@ -323,6 +360,61 @@ class SocialPoster:
         return pub.json()
 
 
+    def post_instagram_tested_on_windows_v2(self, message: str, media_url: str, is_video: bool):
+        """
+        Updated Instagram posting function.
+        Adds polling to ensure the IG container is ready before publishing (fixes 9007 error).
+        """
+
+        import requests
+
+        token = self.ig_page_token or self.fb_page_token
+        if not (self.ig_user_id and token):
+            raise RuntimeError("IG missing ig_user_id or token")
+
+        proof = self._appsecret_proof(token)
+
+        # Step 1: Create IG media container
+        ig_endpoint = f"https://graph.facebook.com/v21.0/{self.ig_user_id}/media"
+        params = {"access_token": token}
+        if proof:
+            params["appsecret_proof"] = proof
+
+        data = {"caption": message[:2200]}
+        if is_video:
+            data.update({"video_url": media_url, "media_type": "REELS", "share_to_feed": "true"})
+        else:
+            data.update({"image_url": media_url})
+
+        rc = requests.post(ig_endpoint, params=params, data=data, timeout=90)
+        safe_print("📤 IG Container:", rc.status_code, rc.text)
+        rc.raise_for_status()
+
+        container_id = rc.json().get("id")
+        if not container_id:
+            raise RuntimeError(f"IG container creation failed: {rc.text}")
+
+        # Step 2: Poll for readiness
+        self._poll_ig_container_ready(container_id, token, self._appsecret_proof, safe_print, is_video)
+
+        # Step 3: Publish when ready
+        pub_endpoint = f"https://graph.facebook.com/v21.0/{self.ig_user_id}/media_publish"
+        pub_params = {"access_token": token}
+        if proof:
+            pub_params["appsecret_proof"] = proof
+
+        pub = requests.post(
+            pub_endpoint,
+            params=pub_params,
+            data={"creation_id": container_id},
+            timeout=90,
+        )
+
+        safe_print("📣 IG Publish:", pub.status_code, pub.text)
+        pub.raise_for_status()
+        return pub.json()
+
+
     # ------------------------------------------------------------------
     # Post ONE item (main.py orchestrates calls)
     # ------------------------------------------------------------------
@@ -348,13 +440,14 @@ class SocialPoster:
 
         # Test set: FB + IG (URL)
         fb_res = self.post_facebook(caption, media_url, is_video)
-        ig_res = self.post_instagram(caption, media_url, is_video)
+        fb_res = "debug removed facebook"
+        ig_res = self.post_instagram_tested_on_windows_v2(caption, media_url, is_video)
 
         safe_print("SUMMARY:", {"facebook": bool(fb_res), "instagram": bool(ig_res)})        
         # move the files
         # 1. Copy current files to local Raspberry Pi folder
         self.copy_current_to_local(media_key, self.posts_folder)
-
+        #DEBUG REMOVED
         # 2. Move S3 files to posted/
         self.move_to_posted(media_key)
 
