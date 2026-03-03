@@ -51,7 +51,7 @@ def graph_get(url, params):
 # ---------------------------------------------------------
 def get_long_lived_user_token():
     print("🔄 Exchanging short-lived token for long-lived token...")
-    url = "https://graph.facebook.com/v19.0/oauth/access_token"
+    url = "https://graph.facebook.com/v21.0/oauth/access_token"
     params = {
         "grant_type": "fb_exchange_token",
         "client_id": FB_APP_ID,
@@ -67,7 +67,7 @@ def get_long_lived_user_token():
 
 def get_pages(user_token):
     print("📄 Fetching Facebook Pages...")
-    url = "https://graph.facebook.com/v19.0/me/accounts"
+    url = "https://graph.facebook.com/v21.0/me/accounts"
     params = {"access_token": user_token}
     data = graph_get(url, params).get("data", [])
     if not data:
@@ -79,7 +79,7 @@ def get_pages(user_token):
 
 def get_instagram_account(page_id, page_token):
     print(f"📷 Checking Instagram account for page {page_id}...")
-    url = f"https://graph.facebook.com/v19.0/{page_id}"
+    url = f"https://graph.facebook.com/v21.0/{page_id}"
     params = {"fields": "instagram_business_account", "access_token": page_token}
     data = graph_get(url, params)
     return data.get("instagram_business_account", {}).get("id")

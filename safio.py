@@ -46,15 +46,17 @@ def safe_print(*args, sep=" ", end="\n", file=sys.stdout, flush=False):
 def get_env(name: str, default=None):
     """
     Cross-platform environment variable getter.
-    On Windows: looks for WIN_<name>
-    On Linux/macOS: looks for <name>
+    On Windows: looks for WIN_<name> first, then falls back to <name>.
+    On Linux/macOS: looks for <name> only.
     Example:
         # Works on both systems with one .env file
-        #   Windows .env → WIN_DROPBOX_APP_KEY=xxxx
+        #   Windows .env → WIN_DROPBOX_APP_KEY=xxxx  (or just DROPBOX_APP_KEY=xxxx)
         #   Linux  .env → DROPBOX_APP_KEY=xxxx
         val = get_env("DROPBOX_APP_KEY")
     """
     system_name = platform.system().lower()
-    env_name = f"WIN_{name}" if "windows" in system_name else name
-    # safe_print(f"env_name: {env_name}")
-    return os.getenv(env_name, default)
+    if "windows" in system_name:
+        val = os.getenv(f"WIN_{name}")
+        if val is not None:
+            return val
+    return os.getenv(name, default)
