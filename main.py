@@ -12,7 +12,6 @@ def main():
     poster = SocialPoster(
         fb_app_id = get_env("FB_APP_ID"),
         fb_app_secret = get_env("FB_APP_SECRET"),
-        fb_long_lived_user_token = get_env("FB_LL_USER_TOKEN"),
         fb_page_id = get_env("FB_PAGE_ID"),
         fb_page_token = get_env("FB_PAGE_TOKEN"),
         ig_user_id = get_env("IG_USER_ID"),

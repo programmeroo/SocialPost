@@ -23,9 +23,8 @@ class SocialPoster:
         # ---- Facebook / Instagram ----
         fb_app_id: str,
         fb_app_secret: str,                   # for appsecret_proof
-        fb_long_lived_user_token: str,        # for page-token refresh via /me/accounts
         fb_page_id: str,
-        fb_page_token: str,                   # starting page token (we can refresh)
+        fb_page_token: str,
         ig_user_id: str,
         ig_page_token: str,                   # can be same as FB Page token
         # ---- Storage (for listing/captions only; NOT used for X media bytes) ----
@@ -40,7 +39,6 @@ class SocialPoster:
         # Store exactly what you pass (no env reads here)
         self.fb_app_id = fb_app_id
         self.fb_app_secret = fb_app_secret
-        self.fb_ll_user_token = fb_long_lived_user_token
         self.fb_page_id = fb_page_id
         self.fb_page_token = fb_page_token
         self.ig_user_id = ig_user_id
@@ -189,7 +187,7 @@ class SocialPoster:
 
 
     # ------------------------------------------------------------------
-    # Facebook (Page) — by URL (v21.0) with appsecret_proof + code 190 refresh
+    # Facebook (Page) — by URL (v21.0) with appsecret_proof
     # ------------------------------------------------------------------
     def _appsecret_proof(self, token: str) -> str | None:
         if not (token and self.fb_app_secret):
@@ -198,37 +196,6 @@ class SocialPoster:
                        msg=token.encode("utf-8"),
                        digestmod=hashlib.sha256)
         return mac.hexdigest()
-
-
-    def fb_refresh_page_token_if_needed(self) -> bool:
-        """Use long-lived user token to fetch Page token via /me/accounts; update fb_page_token."""
-        if not (self.fb_ll_user_token and self.fb_page_id):
-            return False
-        params = {"access_token": self.fb_ll_user_token}
-        proof = self._appsecret_proof(self.fb_ll_user_token)
-        if proof:
-            params["appsecret_proof"] = proof
-
-        r = requests.get("https://graph.facebook.com/v21.0/me/accounts", params=params, timeout=30)
-        if not r.ok:
-            safe_print("FB /me/accounts error:", r.status_code, r.text)
-            return False
-
-        new_tok = None
-        for acc in r.json().get("data", []):
-            if acc.get("id") == self.fb_page_id and acc.get("access_token"):
-                new_tok = acc["access_token"]
-                break
-        if not new_tok:
-            safe_print("FB: could not find page token for", self.fb_page_id)
-            return False
-
-        self.fb_page_token = new_tok
-        # mirror to IG if you share tokens and it’s not set:
-        if not self.ig_page_token:
-            self.ig_page_token = new_tok
-        safe_print("FB: refreshed page token.")
-        return True
 
 
     def post_facebook(self, message: str, media_url: str | None, is_video: bool):
@@ -257,24 +224,6 @@ class SocialPoster:
         if r.ok:
             safe_print("📘 Facebook:", r.status_code, r.text)
             return r.json()
-
-        # code 190 -> refresh once
-        try:
-            code = (r.json().get("error") or {}).get("code")
-        except Exception:
-            code = None
-
-        if code == 190 and self.fb_refresh_page_token_if_needed():
-            token = self.fb_page_token
-            data["access_token"] = token
-            params = {}
-            proof = self._appsecret_proof(token)
-            if proof:
-                params["appsecret_proof"] = proof
-            r2 = requests.post(url, params=params, data=data, timeout=90)
-            safe_print("📘 Facebook retry:", r2.status_code, r2.text)
-            r2.raise_for_status()
-            return r2.json()
 
         safe_print("📘 Facebook FAIL:", r.status_code, r.text)
         r.raise_for_status()
